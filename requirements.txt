@@ -4,8 +4,5 @@ scikit-learn
 xgboost
 matplotlib
 seaborn
-opencv-python
-librosa
-soundfile
 joblib
-jupyter
+ipykernel
