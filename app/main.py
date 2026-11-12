@@ -11,6 +11,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+import warnings
+try:
+    from sklearn.exceptions import InconsistentVersionWarning
+    warnings.filterwarnings("ignore", category=InconsistentVersionWarning)
+except ImportError:
+    pass
+
 import predict  # noqa: E402
 from config import (AUDIO_EXTS, DATA_PATH, FACE_THRESHOLD, IMAGE_EXTS, MEMBERS,  # noqa: E402
                     VOICE_THRESHOLD)

@@ -24,4 +24,4 @@ FACE_THRESHOLD = 0.60
 VOICE_THRESHOLD = 0.65   # Member C: chosen by src/train_voice_model.py (also applied inside predict_voice)
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png"}
-AUDIO_EXTS = {".wav"}
+AUDIO_EXTS = {".wav", ".m4a"}
