@@ -89,8 +89,12 @@ def convert_raw_recordings():
         folder.mkdir(parents=True, exist_ok=True)
         for old in folder.glob("*.wav"):
             old.unlink()
+    def order(raw):   # a file without a number is take 1; "nick_approve_2" is take 2
+        number = re.search(r"(\d+)$", raw.stem)
+        return (*parse_raw_name(raw), int(number.group(1)) if number else 1, raw.name)
+
     rows, takes = [], {}
-    for raw in sorted(RAW_DIR.glob("*.m4a")):
+    for raw in sorted(RAW_DIR.glob("*.m4a"), key=order):
         member, phrase = parse_raw_name(raw)
         if member == "unknown":
             out = UNAUTHORIZED_DIR / f"unknown_{phrase}.wav"
@@ -232,7 +236,10 @@ def plot_waveforms_and_spectrograms():
     fig, axes = plt.subplots(len(clips), 2, figsize=(12, 2.4 * len(clips)), constrained_layout=True)
     for (member, phrase, wav), (ax_w, ax_s) in zip(clips, axes):
         y, _ = librosa.load(wav, sr=SR)
-        label = f'{member.title()}: "{PHRASES.get(phrase, "unauthorized sample")}"'
+        if member == "unknown":
+            label = f"Non-member ({wav.stem}): unauthorized sample"
+        else:
+            label = f'{member.title()}: "{PHRASES[phrase]}", take {wav.stem.rsplit("_", 1)[1]}'
         _waveform(ax_w, y, f"{label} (waveform)")
         img = _spectrogram(ax_s, y, f"{label} (mel spectrogram)")
     fig.colorbar(img, ax=axes[:, 1], format="%+2.0f dB", shrink=0.4, label="Power (dB)")

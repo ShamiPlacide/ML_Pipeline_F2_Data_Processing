@@ -133,42 +133,68 @@ Customer-grouped 5-fold CV, produced by `src/train_product_model.py` and saved i
 
 ## Data and method (voice model)
 
+**Inputs:** two takes of each phrase ("Yes, approve", "Confirm transaction") from Denyse, Nick and Placide (12 recordings), plus one recording each from two non-members (`media/audio/Diff.m4a`, `media/audio/Unknown-2.m4a`) used as unauthorized samples.
+
+1. **Cleaning.** Dropped 5 exact duplicate social rows; converted the social ID (`A178`) and the transaction ID (`151`) to a common integer `customer_id`; parsed `purchase_date`.
+2. **Aggregation.** Social profiles hold several rows per customer (one per platform), so they were collapsed to one row per customer (mean scores, encoded sentiment, most frequent platform) to avoid a many-to-many join.
+3. **Join.** Left join with transactions on the left, `validate="many_to_one"`. All 150 transactions are kept; 117 (78%) matched a social profile and 33 (22%) did not. An inner join would have discarded those 33 rows.
+4. **Features.** `has_social_profile` and `rating_missing` flags, median imputation, per-customer purchase count / average spend / total spend / recency, date features, one-hot platform. Final dataset: 150 rows × 25 columns, no nulls.
+5. **Evaluation.** Customer-grouped 5-fold cross-validation, so one customer's transactions never appear in both training and test data.
+
+## Results (product model)
+
+Customer-grouped 5-fold CV, produced by `src/train_product_model.py` and saved in `reports/product_model_metrics.csv`:
+
+| Model | Accuracy | Macro-F1 | Log-loss |
+|---|---|---|---|
+| Baseline (class priors) | 0.193 | 0.102 | 1.637 |
+| Logistic Regression (C=0.05) | 0.213 | 0.179 | 1.729 |
+| Random Forest (shallow) | 0.247 | 0.207 | 1.648 |
+| HistGradientBoosting (regularized) | 0.233 | 0.213 | 1.805 |
+| **XGBoost (regularized), selected** | 0.240 | 0.222 | 1.665 |
+
+**Product category is not reliably predictable from the available features.** All models perform close to the class-prior baseline (about 20% accuracy for 5 classes), consistent with the weak correlations found in the EDA. With 150 rows the standard error on accuracy is about ±3.5 points, so differences between models are within noise. This is reported as an honest result rather than tuned further. Exact scores vary slightly between environments.
+
+## Data and method (voice model)
+
 **Inputs:** two phone recordings per member ("Yes, approve", "Confirm transaction") for Denyse, Nick and Placide, plus one recording from a non-member (`media/audio/Diff.m4a`) used as the unauthorized sample.
 
 1. **Cleaning.** Every recording is resampled to 16 kHz mono, trimmed of leading and trailing silence, peak-normalised and saved as `media/audio/original/<member>_<phrase>_<take>.wav` (non-members in `media/audio/unauthorized/`).
-2. **Augmentation.** Six copies per clip in `media/audio/augmented/`: pitch shift (+1 / -1 semitone), time stretch (15% faster / slower), white background noise (20 dB / 10 dB SNR). 7 recordings become 49 clips.
+2. **Augmentation.** Six copies per clip in `media/audio/augmented/`: pitch shift (+1 / -1 semitone), time stretch (15% faster / slower), white background noise (20 dB / 10 dB SNR). 14 recordings become 98 clips.
 3. **Features.** 13 MFCCs (mean and std), delta-MFCC std, spectral roll-off, centroid, bandwidth, RMS energy, zero-crossing rate, pitch (F0), voiced fraction and duration: 53 features per clip in `data/processed/audio_features.csv`. Statistics are taken over voiced frames only, so pauses and background noise do not distort them.
 4. **Model.** A classifier identifies the member; the voice is only verified when its confidence reaches a threshold, otherwise `predict_voice` returns `"unknown"`.
 5. **Evaluation.** Leave-one-recording-out: a recording and all its augmented copies are held out together, so the model is never tested on a recording it has heard in any form. The non-member clips are never used for training or for choosing the threshold.
 
-Adding recordings: drop more `.m4a` files into `media/audio/` (member name first, then a phrase word, e.g. `nick_approve_2.m4a`; anything starting with `unknown` is a non-member) and re-run the two commands.
+Adding recordings: drop more `.m4a` files into `media/audio/` (member name first, then a phrase word, e.g. `nick_approve_3.m4a`; the number at the end is the take; anything starting with `unknown` is a non-member) and re-run the two commands.
 
 ## Results (voice model)
 
-Leave-one-recording-out CV on 42 member clips from 6 recordings, produced by `src/train_voice_model.py` and saved in `reports/voice_model_metrics.csv`:
+Leave-one-recording-out CV on 84 member clips from 12 recordings, produced by `src/train_voice_model.py` and saved in `reports/voice_model_metrics.csv`:
 
 | Model | Features | Accuracy | Macro-F1 | Log-loss |
 |---|---|---|---|---|
-| Logistic Regression (C=0.1) | all 53 | 0.452 | 0.461 | 1.073 |
-| Random Forest | all 53 | 0.452 | 0.439 | 0.990 |
-| SVM (RBF) | all 53 | 0.405 | 0.416 | 1.178 |
-| **Logistic Regression (C=0.1), selected** | 19 long-term averages | 0.714 | 0.701 | 0.654 |
-| Random Forest | 19 long-term averages | 0.595 | 0.521 | 0.859 |
-| SVM (RBF) | 19 long-term averages | 0.619 | 0.585 | 0.801 |
+| Baseline (class priors) | none | 0.000 | 0.000 | 1.299 |
+| **Logistic Regression (C=0.1), selected** | all 53 | 0.810 | 0.810 | 0.460 |
+| Random Forest | all 53 | 0.810 | 0.806 | 0.597 |
+| SVM (RBF) | all 53 | 0.786 | 0.789 | 0.522 |
+| Logistic Regression (C=0.1) | 19 long-term averages | 0.738 | 0.728 | 0.554 |
+| Random Forest | 19 long-term averages | 0.857 | 0.855 | 0.484 |
+| SVM (RBF) | 19 long-term averages | 0.821 | 0.817 | 0.536 |
 
-Chance is 0.33. The long-term averages (the `*_mean` columns) beat the full feature set for every model: standard deviations, deltas and duration describe how one phrase unfolds rather than who is speaking. Denyse is always identified; every error is a confusion between Nick and Placide, whose pitch is similar.
+Chance is 0.33. The model with the lowest log-loss is selected; with 12 recordings the differences between models are within noise. The baseline scores 0 because holding out one of a member's four recordings makes that member the minority class in the training fold. Denyse is recognised in 26 of 28 held-out clips; most errors are between Nick and Placide, whose pitch is similar. With only one take per phrase (6 recordings) the best accuracy was 0.71, so the second takes helped every model.
 
-With the confidence threshold (0.63, chosen on the held-out predictions):
+With the confidence threshold (0.65, chosen on the held-out predictions; also set as `VOICE_THRESHOLD` in `src/config.py`):
 
 | Check | Result |
 |---|---|
-| Unseen member recordings verified under the right name | 52% |
-| Unseen member recordings rejected | 48% |
-| Accepted under the wrong name | 0% |
-| The 6 original member recordings (as used in the demo) | all verified, confidence 0.72 to 0.95 |
-| Non-member recording | rejected (confidence 0.53); 6 of its 7 clips incl. augmented copies rejected |
+| Held-out member clips verified under the right name | 57% |
+| Held-out member clips rejected | 42% |
+| Accepted under the wrong name | 1% (1 of 84) |
+| The 12 member recordings (as used in the demo) | all verified, confidence 0.89 to 0.98 |
+| Non-member `unknown_diff` | rejected (confidence 0.46); 4 of its 6 augmented copies also rejected |
+| Non-member `unknown_2` | **accepted as Nick** (confidence 0.95), as were all its augmented copies |
 
-**Limits.** Each member has one recording per phrase, so the test asks the model to recognise a speaker on a phrase it has never heard from them, and six recordings give only rough estimates. The rejection test rests on a single stranger. More takes per member and more non-member voices would improve both the model and the confidence in these numbers.
+**Limits.** `unknown_2` is a low voice that sits as close to Nick's recordings in feature space as Nick's own takes do; every candidate model accepts it, and an extra "unknown" class trained on the other stranger did not help. Classifier confidence says which member a voice is closest to, not how close. In the full system that person would also have to pass face recognition as Nick, because the CLI requires face and voice to agree. More non-member voices, more takes, and distance-based verification (e.g. pretrained speaker embeddings) are the next steps.
 
 > _TODO: add face model results (accuracy, F1, log-loss) once trained._
 
