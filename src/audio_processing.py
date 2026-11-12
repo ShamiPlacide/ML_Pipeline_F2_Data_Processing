@@ -216,36 +216,87 @@ def build_feature_table():
 # --------------------------------------------------------------------------- #
 # Plots
 # --------------------------------------------------------------------------- #
-def _waveform(ax, y, title):
-    librosa.display.waveshow(y, sr=SR, ax=ax, color="#2a6f97")
-    ax.set(title=title, xlabel="Time (s)", ylabel="Amplitude", ylim=(-1.05, 1.05))
+PLOT_STYLE = {"font.size": 8, "axes.titlesize": 8.5, "axes.labelsize": 8,
+              "xtick.labelsize": 7, "ytick.labelsize": 7}
+AUG_LABELS = {"original": "original", "pitch_up": "pitch +1 semitone",
+              "pitch_down": "pitch -1 semitone", "stretch_fast": "15% faster",
+              "stretch_slow": "15% slower", "noise_20db": "noise, 20 dB SNR",
+              "noise_10db": "noise, 10 dB SNR"}
 
 
-def _spectrogram(ax, y, title):
+def _cell(ax_w, ax_s, y, title, first_col):
+    """One recording: small waveform on top, mel spectrogram below, same time axis."""
+    duration = len(y) / SR
+    librosa.display.waveshow(y, sr=SR, ax=ax_w, color="#2a6f97", linewidth=0.4)
+    ax_w.set(title=title, ylim=(-1.05, 1.05), xlim=(0, duration), xlabel="", xticks=[])
     mel = librosa.feature.melspectrogram(y=y, sr=SR, n_fft=N_FFT, hop_length=HOP, n_mels=64)
     img = librosa.display.specshow(librosa.power_to_db(mel, ref=np.max), sr=SR, hop_length=HOP,
-                                   x_axis="time", y_axis="mel", ax=ax, cmap="magma",
+                                   x_axis="time", y_axis="mel", ax=ax_s, cmap="magma",
                                    vmin=-80, vmax=0)
-    ax.set(title=title, xlabel="Time (s)", ylabel="Frequency (Hz)")
+    ax_s.set(xlim=(0, duration), xlabel="Time (s)", yticks=[0, 512, 2048, 8192])
+    ax_s.xaxis.set_major_locator(matplotlib.ticker.MaxNLocator(3))
+    ax_w.set_yticks([-1, 0, 1])
+    if first_col:
+        ax_w.set_ylabel("Amplitude")
+        ax_s.set_ylabel("Frequency (Hz)")
+    else:
+        ax_w.set(ylabel="", yticklabels=[])
+        ax_s.set(ylabel="", yticklabels=[])
     return img
 
 
 def plot_waveforms_and_spectrograms():
-    """One row per recording: waveform on the left, mel spectrogram on the right."""
-    clips = list_clips()
-    fig, axes = plt.subplots(len(clips), 2, figsize=(12, 2.4 * len(clips)), constrained_layout=True)
-    for (member, phrase, wav), (ax_w, ax_s) in zip(clips, axes):
-        y, _ = librosa.load(wav, sr=SR)
-        if member == "unknown":
-            label = f"Non-member ({wav.stem}): unauthorized sample"
-        else:
-            label = f'{member.title()}: "{PHRASES[phrase]}", take {wav.stem.rsplit("_", 1)[1]}'
-        _waveform(ax_w, y, f"{label} (waveform)")
-        img = _spectrogram(ax_s, y, f"{label} (mel spectrogram)")
-    fig.colorbar(img, ax=axes[:, 1], format="%+2.0f dB", shrink=0.4, label="Power (dB)")
-    path = FIG_DIR / "audio_waveforms_spectrograms.png"
-    fig.savefig(path, dpi=130)
-    plt.close(fig)
+    """Every recording in a compact grid: one row per member (non-members last),
+    columns ordered by phrase and take. Fits on one report page."""
+    order = {"yes_approve": 0, "confirm_transaction": 1}
+    rows = {}
+    for member, phrase, wav in list_clips():
+        rows.setdefault(member, []).append((order.get(phrase, 2), wav.stem, member, phrase, wav))
+    ncols = max(len(v) for v in rows.values())
+    cells = []
+    for member in sorted(rows, key=lambda m: (m == "unknown", m)):
+        row = sorted(rows[member])
+        for _, stem, _, phrase, wav in row:
+            if member == "unknown":
+                title = f"Non-member: {stem}"
+            else:
+                title = f'{member.title()}: "{PHRASES[phrase]}" {stem.rsplit("_", 1)[1]}'
+            cells.append((title, librosa.load(wav, sr=SR)[0]))
+        cells += [None] * (-len(row) % ncols)          # start each member on a new row
+    while cells and cells[-1] is None:                  # no blank row at the end
+        cells.pop()
+    return _grid_figure(cells, ncols,
+                        "Waveform (top) and mel spectrogram (bottom) of every recording",
+                        FIG_DIR / "audio_waveforms_spectrograms.png")
+
+
+def _grid_figure(cells, ncols, suptitle, path):
+    """cells: (title, signal) pairs drawn left to right, top to bottom; None leaves a gap.
+
+    Each grid row is a waveform strip, a spectrogram and a spacer, laid out explicitly so
+    the figure keeps a fixed, page-friendly shape whatever the clip lengths.
+    """
+    nrows = -(-len(cells) // ncols)
+    ratios = []
+    for r in range(nrows):
+        ratios += [0.55, 1.15] + ([0.62] if r < nrows - 1 else [])
+    with plt.rc_context(PLOT_STYLE):
+        fig = plt.figure(figsize=(2.3 * ncols + 1.0, 2.2 * nrows + 0.45))
+        gs = fig.add_gridspec(len(ratios), ncols, height_ratios=ratios, hspace=0.22, wspace=0.08,
+                              left=0.75 / fig.get_figwidth(), right=1 - 0.95 / fig.get_figwidth(),
+                              top=1 - 0.5 / fig.get_figheight(), bottom=0.42 / fig.get_figheight())
+        img = None
+        for i, cell in enumerate(cells):
+            if cell is None:
+                continue
+            r, col = divmod(i, ncols)
+            img = _cell(fig.add_subplot(gs[3 * r, col]), fig.add_subplot(gs[3 * r + 1, col]),
+                        cell[1], cell[0], col == 0)
+        cax = fig.add_axes([1 - 0.75 / fig.get_figwidth(), 0.3, 0.14 / fig.get_figwidth(), 0.4])
+        fig.colorbar(img, cax=cax, format="%+2.0f dB", label="Power (dB)")
+        fig.suptitle(suptitle, fontsize=10, y=1 - 0.12 / fig.get_figheight(), va="top")
+        fig.savefig(path, dpi=200)
+        plt.close(fig)
     return path
 
 
@@ -254,20 +305,9 @@ def plot_augmentations(wav=None):
     wav = Path(wav) if wav else sorted(ORIGINAL_DIR.glob("*.wav"))[0]
     y, _ = librosa.load(wav, sr=SR)
     versions = {"original": y, **augment(y, np.random.default_rng(SEED))}
-    fig, axes = plt.subplots(2, len(versions), figsize=(3.1 * len(versions), 5.2),
-                             constrained_layout=True)
-    for col, (name, signal) in enumerate(versions.items()):
-        _waveform(axes[0, col], signal, name)
-        _spectrogram(axes[1, col], signal, "")
-        for ax in axes[:, col]:
-            ax.xaxis.set_major_locator(matplotlib.ticker.MaxNLocator(4))
-            if col:
-                ax.set_ylabel("")
-    fig.suptitle(f"Augmentations of {wav.name}")
-    path = FIG_DIR / "audio_augmentations.png"
-    fig.savefig(path, dpi=130)
-    plt.close(fig)
-    return path
+    cells = [(AUG_LABELS[name], signal) for name, signal in versions.items()]
+    return _grid_figure(cells, 4, f"Augmentations of {wav.name}",
+                        FIG_DIR / "audio_augmentations.png")
 
 
 def plot_feature_separation(df):
