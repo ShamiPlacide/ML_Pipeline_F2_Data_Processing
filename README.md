@@ -14,7 +14,7 @@ face image → recognized? → voice audio → verified? → product recommendat
 |---|---|---|
 | Data merge, EDA, feature engineering, product model | _Member A_ | Done |
 | Image pipeline, `image_features.csv`, face model | _Member B_ | _TODO_ |
-| Audio pipeline, `audio_features.csv`, voice model | _Member C_ | _TODO_ |
+| Audio pipeline, `audio_features.csv`, voice model | Nick (Member C) | Done |
 | CLI demo, unauthorized-attempt demo, video, report | _Member D_ | _TODO_ |
 
 ## Repository structure
@@ -30,7 +30,8 @@ multimodal-auth-system/
 │   ├── images/               # original/, augmented/, unauthorized/
 │   └── audio/                # original/, augmented/, unauthorized/
 ├── notebooks/
-│   └── multimodal_preprocessing.ipynb   # merge validation, EDA, model comparison
+│   ├── multimodal_preprocessing.ipynb   # merge validation, EDA, model comparison
+│   └── audio_pipeline.ipynb             # audio plots, augmentation, features, voice model
 ├── src/
 │   ├── data_merge.py             # clean, merge, feature engineering
 │   ├── image_processing.py       # load, augment, extract image features
@@ -79,7 +80,14 @@ python src/data_merge.py            # writes data/processed/merged_dataset.csv
 python src/train_product_model.py   # writes models/product_model.joblib
                                     # and reports/product_model_metrics.csv
 
-# 3. Image and audio pipelines, face and voice models   (TODO: add commands)
+# 3. Audio pipeline and voice model
+python src/audio_processing.py      # converts media/audio/*.m4a to WAV, augments, writes
+                                    # data/processed/audio_features.csv and reports/figures/audio_*.png
+python src/train_voice_model.py     # writes models/voice_model.joblib
+                                    # and reports/voice_model_metrics.csv
+python src/predict.py media/audio/Nick-approve.m4a   # quick check of predict_voice
+
+# 3b. Image pipeline and face model                     (TODO: add commands)
 
 # 4. CLI demo                                            (TODO: add command)
 python app/main.py
@@ -123,7 +131,46 @@ Customer-grouped 5-fold CV, produced by `src/train_product_model.py` and saved i
 
 **Product category is not reliably predictable from the available features.** All models perform close to the class-prior baseline (about 20% accuracy for 5 classes), consistent with the weak correlations found in the EDA. With 150 rows the standard error on accuracy is about ±3.5 points, so differences between models are within noise. This is reported as an honest result rather than tuned further. Exact scores vary slightly between environments.
 
-> _TODO: add face and voice model results (accuracy, F1, log-loss) once trained._
+## Data and method (voice model)
+
+**Inputs:** two phone recordings per member ("Yes, approve", "Confirm transaction") for Denyse, Nick and Placide, plus one recording from a non-member (`media/audio/Diff.m4a`) used as the unauthorized sample.
+
+1. **Cleaning.** Every recording is resampled to 16 kHz mono, trimmed of leading and trailing silence, peak-normalised and saved as `media/audio/original/<member>_<phrase>_<take>.wav` (non-members in `media/audio/unauthorized/`).
+2. **Augmentation.** Six copies per clip in `media/audio/augmented/`: pitch shift (+1 / -1 semitone), time stretch (15% faster / slower), white background noise (20 dB / 10 dB SNR). 7 recordings become 49 clips.
+3. **Features.** 13 MFCCs (mean and std), delta-MFCC std, spectral roll-off, centroid, bandwidth, RMS energy, zero-crossing rate, pitch (F0), voiced fraction and duration: 53 features per clip in `data/processed/audio_features.csv`. Statistics are taken over voiced frames only, so pauses and background noise do not distort them.
+4. **Model.** A classifier identifies the member; the voice is only verified when its confidence reaches a threshold, otherwise `predict_voice` returns `"unknown"`.
+5. **Evaluation.** Leave-one-recording-out: a recording and all its augmented copies are held out together, so the model is never tested on a recording it has heard in any form. The non-member clips are never used for training or for choosing the threshold.
+
+Adding recordings: drop more `.m4a` files into `media/audio/` (member name first, then a phrase word, e.g. `nick_approve_2.m4a`; anything starting with `unknown` is a non-member) and re-run the two commands.
+
+## Results (voice model)
+
+Leave-one-recording-out CV on 42 member clips from 6 recordings, produced by `src/train_voice_model.py` and saved in `reports/voice_model_metrics.csv`:
+
+| Model | Features | Accuracy | Macro-F1 | Log-loss |
+|---|---|---|---|---|
+| Logistic Regression (C=0.1) | all 53 | 0.452 | 0.461 | 1.073 |
+| Random Forest | all 53 | 0.452 | 0.439 | 0.990 |
+| SVM (RBF) | all 53 | 0.405 | 0.416 | 1.178 |
+| **Logistic Regression (C=0.1), selected** | 19 long-term averages | 0.714 | 0.701 | 0.654 |
+| Random Forest | 19 long-term averages | 0.595 | 0.521 | 0.859 |
+| SVM (RBF) | 19 long-term averages | 0.619 | 0.585 | 0.801 |
+
+Chance is 0.33. The long-term averages (the `*_mean` columns) beat the full feature set for every model: standard deviations, deltas and duration describe how one phrase unfolds rather than who is speaking. Denyse is always identified; every error is a confusion between Nick and Placide, whose pitch is similar.
+
+With the confidence threshold (0.63, chosen on the held-out predictions):
+
+| Check | Result |
+|---|---|
+| Unseen member recordings verified under the right name | 52% |
+| Unseen member recordings rejected | 48% |
+| Accepted under the wrong name | 0% |
+| The 6 original member recordings (as used in the demo) | all verified, confidence 0.72 to 0.95 |
+| Non-member recording | rejected (confidence 0.53); 6 of its 7 clips incl. augmented copies rejected |
+
+**Limits.** Each member has one recording per phrase, so the test asks the model to recognise a speaker on a phrase it has never heard from them, and six recordings give only rough estimates. The rejection test rests on a single stranger. More takes per member and more non-member voices would improve both the model and the confidence in these numbers.
+
+> _TODO: add face model results (accuracy, F1, log-loss) once trained._
 
 ## Demo
 
@@ -138,7 +185,7 @@ Customer-grouped 5-fold CV, produced by `src/train_product_model.py` and saved i
 |---|---|---|
 | _Member A_ | Data cleaning, merge and validation, EDA, feature engineering, product model | `src/data_merge.py`, `src/train_product_model.py`, `notebooks/multimodal_preprocessing.ipynb`, `data/processed/merged_dataset.csv` |
 | _Member B_ | _TODO_ | _TODO_ |
-| _Member C_ | _TODO_ | _TODO_ |
+| Nick (Member C) | Audio cleaning, waveform and spectrogram plots, augmentation, audio feature extraction, voiceprint model, `predict_voice` | `src/audio_processing.py`, `src/train_voice_model.py`, `src/predict.py` (`predict_voice`), `notebooks/audio_pipeline.ipynb`, `data/processed/audio_features.csv`, `models/voice_model.joblib` |
 | _Member D_ | _TODO_ | _TODO_ |
 
 Every member also submitted their own 3 face photos (neutral, smiling, surprised) and 2 voice recordings ("Yes, approve", "Confirm transaction"). See `docs/contributions.md` for details.

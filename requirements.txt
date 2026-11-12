@@ -6,3 +6,5 @@ matplotlib
 seaborn
 joblib
 ipykernel
+librosa
+soundfile
