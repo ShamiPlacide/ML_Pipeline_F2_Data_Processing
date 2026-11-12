@@ -20,6 +20,7 @@ from config import (DATA_PATH, FACE_MODEL_PATH, PRODUCT_MODEL_PATH, VOICE_MODEL_
 
 _product_bundle = None
 _dataset = None
+_voice_bundle = None
 
 
 def stub_status():
@@ -50,10 +51,23 @@ def _real_predict_face(image_path):
 
 
 def _real_predict_voice(audio_path):
-    # TODO Member C: load models/voice_model.joblib, run the SAME feature extraction used in
-    # training on this one audio file (src/audio_processing.py), and return (member_name, confidence).
-    # Return ("unknown", confidence) when confidence is below the threshold you chose.
-    raise NotImplementedError("Member C: implement _real_predict_voice in src/predict.py")
+    """Voiceprint model (Member C).
+
+    The clip goes through the same cleaning and feature extraction as the training data
+    (src/audio_processing.py). The speaker is only named when the model's confidence reaches
+    the threshold saved with the model; otherwise "unknown" is returned.
+    """
+    global _voice_bundle
+    from audio_processing import features_from_file   # imported here: needs librosa
+
+    if _voice_bundle is None:
+        _voice_bundle = joblib.load(VOICE_MODEL_PATH)
+    X = pd.DataFrame([features_from_file(audio_path)])[_voice_bundle["feature_names"]]
+    proba = _voice_bundle["model"].predict_proba(X)[0]
+    confidence = float(proba.max())
+    if confidence < _voice_bundle["threshold"]:
+        return "unknown", confidence
+    return str(_voice_bundle["label_encoder"].inverse_transform([proba.argmax()])[0]), confidence
 
 
 # ----------------------------------------------------------------------------- public API
@@ -78,3 +92,9 @@ def predict_product(customer_id):
     proba = _product_bundle["model"].predict_proba(row[_product_bundle["feature_names"]])[0]
     label = _product_bundle["label_encoder"].inverse_transform([proba.argmax()])[0]
     return str(label), float(proba.max())
+
+
+if __name__ == "__main__":   # quick voice check: python src/predict.py path/to/audio [...]
+    import sys
+    for path in sys.argv[1:]:
+        print(path, "->", predict_voice(path))

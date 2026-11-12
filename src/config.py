@@ -21,7 +21,7 @@ MEMBERS = {
 # TODO: set from the threshold values chosen by Member B (face) and Member C (voice).
 # A prediction below its threshold, or labelled "unknown", is rejected.
 FACE_THRESHOLD = 0.60
-VOICE_THRESHOLD = 0.60
+VOICE_THRESHOLD = 0.65   # Member C: chosen by src/train_voice_model.py (also applied inside predict_voice)
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png"}
 AUDIO_EXTS = {".wav"}

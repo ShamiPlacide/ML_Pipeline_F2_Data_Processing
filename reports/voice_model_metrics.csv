@@ -1,0 +1,8 @@
+model,features,accuracy,f1_macro,log_loss,selected,threshold,member_verified_rate_cv,member_rejected_rate_cv,member_wrong_identity_accepted_rate_cv,member_verified_rate_training_clips,unknown_rejected_rate
+Baseline (class priors),all features,0.0,0.0,1.2992829841302609,False,,,,,,
+Logistic Regression (C=0.1),all features,0.8095238095238095,0.8099759201926385,0.45965643950910473,True,0.651,0.5714285714285714,0.4166666666666667,0.011904761904761904,1.0,0.35714285714285715
+Random Forest,all features,0.8095238095238095,0.8063059436873479,0.5970042253412181,False,,,,,,
+SVM (RBF),all features,0.7857142857142857,0.7889400921658986,0.5218108594665211,False,,,,,,
+Logistic Regression (C=0.1),long-term averages,0.7380952380952381,0.7276826318335753,0.5535585246236521,False,,,,,,
+Random Forest,long-term averages,0.8571428571428571,0.8545073375262054,0.4840196654215903,False,,,,,,
+SVM (RBF),long-term averages,0.8214285714285714,0.8166049382716049,0.5359413835410708,False,,,,,,
