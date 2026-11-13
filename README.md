@@ -205,7 +205,8 @@ With the confidence threshold (0.65, chosen on the held-out predictions; also se
 
 
 ## Team contributions
-[BSE_Group_Assignments_Task_Sheet_ML_Pipeline_Formative2_Cohort_3_Team_12.xlsx](https://github.com/user-attachments/files/34806825/BSE_Group_Assignments_Task_Sheet_ML_Pipeline_Formative2_Cohort_3_Team_12.xlsx)
+[BSE_Group_Assignments_Task_Sheet_ML_Pipeline_Formative2_Cohort_3_Team_12 (1).xlsx](https://github.com/user-attachments/files/34826634/BSE_Group_Assignments_Task_Sheet_ML_Pipeline_Formative2_Cohort_3_Team_12.1.xlsx)
+
 
 
 Every member also submitted their own 3 face photos (neutral, smiling, surprised) and 2 voice recordings ("Yes, approve", "Confirm transaction").
