@@ -8,3 +8,5 @@ joblib
 ipykernel
 librosa
 soundfile
+pillow
+scikit-image

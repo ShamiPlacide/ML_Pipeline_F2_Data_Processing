@@ -44,10 +44,9 @@ def _stub(path):
 
 # ----------------------------------------------------------------------------- real hooks
 def _real_predict_face(image_path):
-    # TODO Member B: load models/face_model.joblib, run the SAME feature extraction used in
-    # training on this one image (src/image_processing.py), and return (member_name, confidence).
-    # Return ("unknown", confidence) when confidence is below the threshold you chose.
-    raise NotImplementedError("Member B: implement _real_predict_face in src/predict.py")
+  # imported here so the CLI still starts if the image libraries are missing
+  import face_predict
+  return face_predict.predict_face(image_path)
 
 
 def _real_predict_voice(audio_path):
