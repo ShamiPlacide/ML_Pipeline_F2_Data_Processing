@@ -10,12 +10,12 @@ face image → recognized? → voice audio → verified? → product recommendat
 
 ## Project status
 
-| Part | Owner | Status |
-|---|---|---|
-| Data merge, EDA, feature engineering, product model | _Member A_ | Done |
-| Image pipeline, `image_features.csv`, face model | _Member B_ | _TODO_ |
-| Audio pipeline, `audio_features.csv`, voice model | Nick (Member C) | Done |
-| CLI demo, unauthorized-attempt demo, video, report | _Member D_ | _TODO_ |
+| Part | Owner     | Status |
+|---|-----------|--------|
+| Data merge, EDA, feature engineering, product model | _Placide_ | Done   |
+| Image pipeline, `image_features.csv`, face model | _Denyse_  | _Done_ |
+| Audio pipeline, `audio_features.csv`, voice model | Nick      | Done   |
+| CLI demo, unauthorized-attempt demo, video, report | _Loice_   | _Done_ |
 
 ## Repository structure
 
@@ -28,7 +28,7 @@ multimodal-auth-system/
 │   └── processed/            # merged_dataset.csv, image_features.csv, audio_features.csv
 ├── media/
 │   ├── images/               # original/, augmented/, unauthorized/
-│   └── audio/                # original/, augmented/, unauthorized/
+│   └── audio/                # augmented/, unauthorized/
 ├── notebooks/
 │   ├── multimodal_preprocessing.ipynb   # merge validation, EDA, model comparison
 │   └── audio_pipeline.ipynb             # audio plots, augmentation, features, voice model
@@ -46,8 +46,6 @@ multimodal-auth-system/
 ├── reports/
 │   ├── report.pdf
 │   └── figures/              # plots used in the report
-└── docs/
-    └── contributions.md
 ```
 
 ## Setup
@@ -214,4 +212,4 @@ With the confidence threshold (0.65, chosen on the held-out predictions; also se
 | Nick (Member C) | Audio cleaning, waveform and spectrogram plots, augmentation, audio feature extraction, voiceprint model, `predict_voice` | `src/audio_processing.py`, `src/train_voice_model.py`, `src/predict.py` (`predict_voice`), `notebooks/audio_pipeline.ipynb`, `data/processed/audio_features.csv`, `models/voice_model.joblib` |
 | _Member D_ | _TODO_ | _TODO_ |
 
-Every member also submitted their own 3 face photos (neutral, smiling, surprised) and 2 voice recordings ("Yes, approve", "Confirm transaction"). See `docs/contributions.md` for details.
+Every member also submitted their own 3 face photos (neutral, smiling, surprised) and 2 voice recordings ("Yes, approve", "Confirm transaction").

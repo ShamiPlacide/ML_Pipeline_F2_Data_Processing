@@ -1,4 +1,4 @@
-"""Shared settings for the CLI (Role D)."""
+"""Shared settings for the CLI."""
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -18,9 +18,8 @@ MEMBERS = {
     "loice": 100,
 }
 
-# TODO: set from the threshold values chosen by Member B (face) and Member C (voice).
 # A prediction below its threshold, or labelled "unknown", is rejected.
-FACE_THRESHOLD = 0.60
+FACE_THRESHOLD = 0.99
 VOICE_THRESHOLD = 0.65   # Member C: chosen by src/train_voice_model.py (also applied inside predict_voice)
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png"}
