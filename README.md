@@ -200,16 +200,12 @@ With the confidence threshold (0.65, chosen on the held-out predictions; also se
 
 > _TODO (Member D): CLI usage, one successful transaction, one unauthorized attempt (non-member face and voice), and the video link._
 
-- Video: _link_
-- Report: `reports/report.pdf`
+- Video: https://youtu.be/z60imyS1AN0 
+- Report: [ML_F2_C3_Group12_Final Report.pdf](https://github.com/user-attachments/files/34806888/ML_F2_C3_Group12_Final.Report.pdf)
+
 
 ## Team contributions
+[BSE_Group_Assignments_Task_Sheet_ML_Pipeline_Formative2_Cohort_3_Team_12.xlsx](https://github.com/user-attachments/files/34806825/BSE_Group_Assignments_Task_Sheet_ML_Pipeline_Formative2_Cohort_3_Team_12.xlsx)
 
-| Member | Tasks completed | Main files |
-|---|---|---|
-| _Member A_ | Data cleaning, merge and validation, EDA, feature engineering, product model | `src/data_merge.py`, `src/train_product_model.py`, `notebooks/multimodal_preprocessing.ipynb`, `data/processed/merged_dataset.csv` |
-| _Member B_ | _TODO_ | _TODO_ |
-| Nick (Member C) | Audio cleaning, waveform and spectrogram plots, augmentation, audio feature extraction, voiceprint model, `predict_voice` | `src/audio_processing.py`, `src/train_voice_model.py`, `src/predict.py` (`predict_voice`), `notebooks/audio_pipeline.ipynb`, `data/processed/audio_features.csv`, `models/voice_model.joblib` |
-| _Member D_ | _TODO_ | _TODO_ |
 
 Every member also submitted their own 3 face photos (neutral, smiling, surprised) and 2 voice recordings ("Yes, approve", "Confirm transaction").
